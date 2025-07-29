@@ -12,5 +12,10 @@ Supporting Information for SILCS-PROTAC method paper, Nordquist et al.
 * loocv_rfe_results: csv of LOO-CV/RFE results
 * figs: contains LOO-CV/RFE figures and general models aggregated for each number of SILCS-PROTAC metric subsets
 * random-trial: results from 10 replicas of LOO-CV/RFE fitting on randomized data
-* protacs_sdf: directories for each system, contains sdf files for protacs, target warheads and ligase warheads
+* protacs_sdf_smiles: directories for each system, contains sdf files for protacs, target warheads and ligase warheads
+  * smiles.csv: csv file with smiles strings of each PROTAC and warheads
+  * mcs_highlight_warheads.py: draws svg image of PROTACs with warheads highlighted
+  * draw_grid.py: helper script to assemble svg images into a grid
+  * create_sdf_smiles_csv.py: helper script to make smiles.csv
+  * Each system directory contains the sdf format files and a grid-style svg image of the protacs with warheads highlighted
 
