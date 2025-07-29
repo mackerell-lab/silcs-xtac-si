@@ -1,0 +1,46 @@
+
+Dropping (correlation above 0.8 to another): []
+
+
+Filter by [['DC50']]
+
+
+N_feat: 10: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min', 'Restr_RMSD_LGFEmin', 'Delta_Target', 'Linker_LGFE_min', 'NumRotatableBonds', 'LWCOMDist_LGFEmin', 'CrippenClogP']
+r_weight = -0.14 RMSE = 2.43
+Aggregated Model: r = 0.12 RMSE = 1.53
+
+N_feat: 9: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min', 'Restr_RMSD_LGFEmin', 'Delta_Target', 'Linker_LGFE_min', 'NumRotatableBonds', 'LWCOMDist_LGFEmin']
+r_weight = -0.03 RMSE = 2.11
+Aggregated Model: r = 0.11 RMSE = 1.55
+
+N_feat: 8: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min', 'Restr_RMSD_LGFEmin', 'Delta_Target', 'Linker_LGFE_min', 'NumRotatableBonds']
+r_weight = -0.02 RMSE = 2.02
+Aggregated Model: r = 0.12 RMSE = 1.58
+
+N_feat: 7: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min', 'Restr_RMSD_LGFEmin', 'Delta_Target', 'Linker_LGFE_min']
+r_weight = -0.01 RMSE = 2.15
+Aggregated Model: r = 0.04 RMSE = 1.80
+
+N_feat: 6: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min', 'Restr_RMSD_LGFEmin', 'Delta_Target']
+r_weight = -0.08 RMSE = 2.23
+Aggregated Model: r = 0.04 RMSE = 1.84
+
+N_feat: 5: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min', 'Restr_RMSD_LGFEmin']
+r_weight = -0.02 RMSE = 2.32
+Aggregated Model: r = 0.00 RMSE = 1.74
+
+N_feat: 4: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase', 'Ligase_LGFE_min']
+r_weight = -0.09 RMSE = 2.56
+Aggregated Model: r = -0.06 RMSE = 1.85
+
+N_feat: 3: ['Target_LGFE_min', 'TWCOMDist_LGFEmin', 'Delta_Ligase']
+r_weight = 0.01 RMSE = 3.19
+Aggregated Model: r = 0.04 RMSE = 2.48
+
+N_feat: 2: ['Target_LGFE_min', 'TWCOMDist_LGFEmin']
+r_weight = -0.06 RMSE = 3.00
+Aggregated Model: r = 0.07 RMSE = 2.57
+
+N_feat: 1: ['Target_LGFE_min']
+r_weight = -0.05 RMSE = 2.98
+Aggregated Model: r = 0.03 RMSE = 2.63
