@@ -312,7 +312,9 @@ def run_loocv(data, X_labels, y_label, alpha=1.0):
 
   return {'r':r,'s':s,'PC':PC,'y_pred':preds,'y_true':trues,'n':len(trues),'rmse':rmse, 'mean_weights':mean_weights,'stderr_weights':stderr_weights}
 
-def save_all_loocv_results(results, X_labels, data):
+# looks at all loo-cv results across data sets
+# also computes general model derived by weighted-average of weights 
+def analyze_loocv_results(results, X_labels, data):
   def apply_rename(x):
     return sys_dict[x]
   df = pd.DataFrame(results)
@@ -342,6 +344,7 @@ def save_all_loocv_results(results, X_labels, data):
   r_weight=0
   rmse_weight=0
   shift = 0
+  fak1_count=0
   
   for (ligase, target) in read_pair_list(pair_file):
     #print(ligase, target)
@@ -349,26 +352,34 @@ def save_all_loocv_results(results, X_labels, data):
     y_labels = [col for col in keep_y_labels if col in s_data.columns]
  
     for y_label in y_labels:
-      s_data = s_data[~np.isnan(s_data[y_label])]
       s_data.loc[:, y_label] = RT * np.log(s_data[y_label] * M_nM)
 
-      X = s_data[X_labels].values
-      if len(X) < 3: break
-      y = s_data[y_label].values
-      #print(X,y)
+      not_nan = ~np.isnan(s_data[y_label])
+      X = s_data[not_nan][X_labels].values
+      y = s_data[not_nan][y_label].values
+      if len(y) > 3:
+        #print(X,y)
 
-      y_pred = X @ weights + shift
-      r, p_r, s, p_s = get_pearson_spearman_nan(y,y_pred)
-      # x= pred, y= true
-      m = 'o' if sys_index < 10 else '^'
-      axp.scatter(y_pred, y, c=color_list[sys_index%10],label=sys_dict[f'{ligase}-{target}']+ f' (r = {r:.2f})', marker=m)
-      #plot_regression(y_pred, y, axp, c=color_list[sys_index%10])
-      trues.append(y)
-      preds.append(y_pred)
-      r_weight    += r*len(y)
-      rmse_weight += rmse_nan(y, y_pred)*len(y)
-      n_cumulative+=len(y)
-      sys_index+=1
+        # general model:
+        y_pred = X @ weights + shift
+        r, p_r, s, p_s = get_pearson_spearman_nan(y,y_pred)
+        # x= pred, y= true
+        m = 'o' if sys_index < 10 else '^'
+        label = sys_dict[f'{ligase}-{target}']+ f' (r = {r:.2f})'
+        # for only fak1 there are multiples
+        if y_label == 'DC50 (nM, Degradation of FAK in PC3 cells after 24 h treatment)':
+          label = sys_dict[f'{ligase}-{target}']+r'$^{(a)}$' +f' (r = {r:.2f})'
+        if y_label == 'DC50 (nM, Degradation of FAK in A549 cells after 24 h treatment)':
+          label = sys_dict[f'{ligase}-{target}']+r'$^{(b)}$' +f' (r = {r:.2f})'
+        
+        axp.scatter(y_pred, y, c=color_list[sys_index%10],label=label, marker=m)
+        #plot_regression(y_pred, y, axp, c=color_list[sys_index%10])
+        trues.append(y)
+        preds.append(y_pred)
+        r_weight    += r*len(y)
+        rmse_weight += rmse_nan(y, y_pred)*len(y)
+        n_cumulative+=len(y)
+        sys_index+=1
 
   axp.set_xlabel('Predicted (kcal/mol)', fontweight='bold')
   axp.set_ylabel(r'RT$\bf{\cdot}$lnDC$\bf{_{50}}$ (kcal/mol)', fontweight='bold')
@@ -390,7 +401,7 @@ def save_all_loocv_results(results, X_labels, data):
   print(f"Aggregated Model: r = {r_weight:.2f} RMSE = {rmse_weight:.2f}")
   #print(new_df)
   plt.tight_layout()
-  if not args.q:
+  if not args.q and not args.randomize:
     plt.savefig(f"figs/general_model/Nmetrics_{len(X_labels)}.svg")
     plt.show()
   plt.close()
@@ -468,7 +479,7 @@ def plot_loocv(data, X_labels, y_label, alpha=1.0):
   plt.show()
   return fig
 
-def rfe_loocv(data, X_labels, y_label, alpha=1.0, RT=1.987, M_nM=1e-9, verbose=True):
+def rfe_loocv(data, X_labels, y_label, alpha=1.0, verbose=True):
   results = []
 
   data = data.copy()
@@ -683,7 +694,6 @@ if __name__ == "__main__":
 
   #data, keep_X_labels  = drop_correlated_X(data, init_X_labels, args.threshold)
 
-  #if args.randomize: data[keep_X_labels] = data[keep_X_labels].apply(shuffle_row, axis=0)
   #
   ##-------------------------------------------------------------
 
@@ -711,6 +721,7 @@ if __name__ == "__main__":
 
 
   data = pd.read_pickle('protac_data.pkl')
+  if args.randomize: data[keep_X_labels] = data[keep_X_labels].apply(shuffle_row, axis=0)
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Single system mode: if target/ligase pair supplied
@@ -738,7 +749,7 @@ if __name__ == "__main__":
     # Loop over available activities
     for act_ndx in range(len(activity_columns)):
       y_label = activity_columns[act_ndx]
-      if sum(single_system[y_label].notna()) > 4:
+      if sum(single_system[y_label].notna()) > 3:
         print(y_label)
         print(single_system[single_system[y_label].notna()]['Article DOI'].iloc[0])
         
@@ -771,13 +782,14 @@ if __name__ == "__main__":
       # Loop over available activities
       for act_ndx in range(len(activity_columns)):
         y_label = activity_columns[act_ndx]
-        if sum(single_system[y_label].notna()) > 4:
+        if sum(single_system[y_label].notna()) > 3:
           rfe_results = rfe_loocv(single_system, keep_X_labels, y_label, alpha=args.alpha, verbose=False)
           best_result = max(rfe_results, key=lambda d: d['r'] if d['r'] is not None else -np.inf)
           best_features = best_result['features']
           all_rfe_results[(ligase, target, y_label)] = best_result
           #plot_rfe_results(rfe_results)
 
+    # Perform RFE, and at each iteration (incrementally reduce N features), perform LOO-CV
     threshold_results=[]
     for n_keep in np.arange(len(keep_X_labels),0,-1) if not args.consensus else [args.consensus]:
       c_feat = consensus_features(all_rfe_results, n_keep=n_keep)
@@ -800,7 +812,7 @@ if __name__ == "__main__":
         # Loop over available activities
         for act_ndx in range(len(activity_columns)):
           y_label = activity_columns[act_ndx]
-          if sum(single_system[y_label].notna()) > 4:
+          if sum(single_system[y_label].notna()) > 3:
             results = run_loocv(single_system, c_feat, y_label, alpha=args.alpha)
             #print(results)
             results['pair'] = f"{ligase}-{target}"
@@ -817,12 +829,19 @@ if __name__ == "__main__":
       pool_true,pool_pred=[],[]
       for i,entry in enumerate(all_loocv_preds):
         m = 'o' if i < 10 else '^'
-        l=ax0.scatter(entry['y_pred'], entry['y_true'], alpha=0.8, label=f"{entry['pair']} r = {entry['r']:.2f}",color=color_list[i%10], marker=m)
+
+        label = f"{sys_dict[entry['pair']]} (r = {entry['r']:.2f})"
+        # for only fak1 there are multiples
+        if entry['y_label'] == 'DC50 (nM, Degradation of FAK in PC3 cells after 24 h treatment)':
+          label = sys_dict[entry['pair']] + r'$^{(a)}$' + f'(r = {entry['r']:.2f})'
+        if entry['y_label'] == 'DC50 (nM, Degradation of FAK in A549 cells after 24 h treatment)':
+          label = sys_dict[entry['pair']] + r'$^{(b)}$' + f'(r = {entry['r']:.2f})'
+ 
+        l=ax0.scatter(entry['y_pred'], entry['y_true'], alpha=0.8, label=label,color=color_list[i%10], marker=m)
         #plot_regression(entry['y_pred'], entry['y_true'], ax0, c=color_list[i%10])
         pool_true.extend(entry['y_true'])
         pool_pred.extend(entry['y_pred'])
-        legend_string = f"{sys_dict[entry['pair']]} (r = {entry['r']:.2f})"
-        legend_text.append(legend_string)
+        legend_text.append(label)
         legend_data.append(l)
         r_weighted += entry['r']*entry['n']
         rmse_weighted += entry['rmse']*entry['n']
@@ -850,12 +869,13 @@ if __name__ == "__main__":
       ax0.fill_between(limits,limits-1, limits+1, alpha=0.2, color='gray')
 
       plt.tight_layout()
-      if not args.q: 
+      if not args.q and not args.randomize: 
         plt.savefig(f"figs/loocv-rfe/Nmetrics_{len(c_feat)}.svg")
         plt.show()
       plt.close()
 
-      agg_r, agg_rmse = save_all_loocv_results(all_loocv_preds, c_feat, data)
+      # these are r and rmse of general model
+      agg_r, agg_rmse = analyze_loocv_results(all_loocv_preds, c_feat, data)
 
       threshold_results.append({
       'N_feat': len(c_feat),
@@ -907,5 +927,5 @@ if __name__ == "__main__":
     ax1b.set_ylim([-0.1,5.1])
 
     plt.tight_layout()
-    plt.savefig(f'figs/overall_goodnessoffit.svg')
+    if not args.randomize: plt.savefig(f'figs/overall_goodnessoffit.svg')
     plt.show()

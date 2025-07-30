@@ -4,7 +4,7 @@ Supporting Information for SILCS-PROTAC method paper, Nordquist et al.
 ## Contents:
 * protac-loocv.py: python script to perform LOO-CV/RFE fitting and produce figures to describe fitting
 * pair_list_dc50.txt : file describing list of data to loop over (enables looping over a subset as desired)
-* protac_data.csv: csv file containing SILCS-PROTAC metrics and experimental DC50 data
+* protac_data.csv: csv file containing SILCS-PROTAC metrics and experimental DC50 data; NOTE: only assays with > 3 entries were considered in final analyses, and there are "duplicate" PROTACS which appear in multiple different, but related, assays
 * protac_data.pkl: python pkl file containing SILCS-PROTAC metrics and experimental DC50 data
 * environment.yml: conda environment yml file to replicate the python packages used by silcs-protac
 
