@@ -1,5 +1,5 @@
-# silcs-protac-si
-Supporting Information for SILCS-PROTAC method paper, Nordquist et al.
+# silcs-xtac-si
+Supporting Information for SILCS-XTAC method paper, Nordquist et al.
 
 ## Contents:
 * protac-loocv.py: python script to perform LOO-CV/RFE fitting and produce figures to describe fitting
