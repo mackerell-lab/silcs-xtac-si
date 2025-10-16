@@ -357,7 +357,7 @@ def analyze_loocv_results(results, X_labels, data):
       not_nan = ~np.isnan(s_data[y_label])
       X = s_data[not_nan][X_labels].values
       y = s_data[not_nan][y_label].values
-      if len(y) > 3:
+      if len(y) > args.min_data_limit:
         #print(X,y)
 
         # general model:
@@ -365,12 +365,13 @@ def analyze_loocv_results(results, X_labels, data):
         r, p_r, s, p_s = get_pearson_spearman_nan(y,y_pred)
         # x= pred, y= true
         m = 'o' if sys_index < 10 else '^'
-        label = sys_dict[f'{ligase}-{target}']+ f' (r = {r:.2f})'
+        r_stderr = np.sqrt((1-r)/(len(y)-2))
+        label = sys_dict[f'{ligase}-{target}']+ f' (r = {r:.2f} ± {r_stderr:.2f})'
         # for only fak1 there are multiples
         if y_label == 'DC50 (nM, Degradation of FAK in PC3 cells after 24 h treatment)':
-          label = sys_dict[f'{ligase}-{target}']+r'$^{(a)}$' +f' (r = {r:.2f})'
+          label = sys_dict[f'{ligase}-{target}']+r'$^{(a)}$' +f' (r = {r:.2f} ± {r_stderr:.2f})'
         if y_label == 'DC50 (nM, Degradation of FAK in A549 cells after 24 h treatment)':
-          label = sys_dict[f'{ligase}-{target}']+r'$^{(b)}$' +f' (r = {r:.2f})'
+          label = sys_dict[f'{ligase}-{target}']+r'$^{(b)}$' +f' (r = {r:.2f} ± {r_stderr:.2f})'
         
         axp.scatter(y_pred, y, c=color_list[sys_index%10],label=label, marker=m)
         #plot_regression(y_pred, y, axp, c=color_list[sys_index%10])
@@ -641,7 +642,7 @@ if __name__ == "__main__":
   parser.add_argument('-metricTol',             type=float, default=1e-4,                          help='Tolerance for accepting improved model, default: %(default)s')
   parser.add_argument('-rfe',                               action='store_true',                   help='Perform Recursive Feature Elimination training; default: %(default)s')
   parser.add_argument('-q',                                 action='store_true',                   help='Quiet the plot')
-  parser.add_argument('-min_data_limit',        type=int,   default=2,                             help='Before plot/fit, ensure there are at least this many data per subset')
+  parser.add_argument('-min_data_limit',        type=int,   default=3,                             help='Before plot/fit, ensure there are at least this many data per subset')
   parser.add_argument('--randomize',                        action='store_true',                   help='Randomly shuffle X data prior to any LOO CV fitting')
   args = parser.parse_args()
 
@@ -782,7 +783,7 @@ if __name__ == "__main__":
       # Loop over available activities
       for act_ndx in range(len(activity_columns)):
         y_label = activity_columns[act_ndx]
-        if sum(single_system[y_label].notna()) > 3:
+        if sum(single_system[y_label].notna()) > args.min_data_limit:
           rfe_results = rfe_loocv(single_system, keep_X_labels, y_label, alpha=args.alpha, verbose=False)
           best_result = max(rfe_results, key=lambda d: d['r'] if d['r'] is not None else -np.inf)
           best_features = best_result['features']
@@ -812,7 +813,7 @@ if __name__ == "__main__":
         # Loop over available activities
         for act_ndx in range(len(activity_columns)):
           y_label = activity_columns[act_ndx]
-          if sum(single_system[y_label].notna()) > 3:
+          if sum(single_system[y_label].notna()) > args.min_data_limit:
             results = run_loocv(single_system, c_feat, y_label, alpha=args.alpha)
             #print(results)
             results['pair'] = f"{ligase}-{target}"
@@ -830,12 +831,13 @@ if __name__ == "__main__":
       for i,entry in enumerate(all_loocv_preds):
         m = 'o' if i < 10 else '^'
 
-        label = f"{sys_dict[entry['pair']]} (r = {entry['r']:.2f})"
+        r_stderr=np.sqrt((1-entry['r'])/(entry['n']-2))
+        label = f"{sys_dict[entry['pair']]} (r = {entry['r']:.2f} ± {r_stderr:.2f})"
         # for only fak1 there are multiples
         if entry['y_label'] == 'DC50 (nM, Degradation of FAK in PC3 cells after 24 h treatment)':
-          label = sys_dict[entry['pair']] + r'$^{(a)}$' + f'(r = {entry['r']:.2f})'
+          label = sys_dict[entry['pair']] + r'$^{(a)}$' + f"(r = {entry['r']:.2f} ± {r_stderr:.2f})"
         if entry['y_label'] == 'DC50 (nM, Degradation of FAK in A549 cells after 24 h treatment)':
-          label = sys_dict[entry['pair']] + r'$^{(b)}$' + f'(r = {entry['r']:.2f})'
+          label = sys_dict[entry['pair']] + r'$^{(b)}$' + f"(r = {entry['r']:.2f} ± {r_stderr:.2f})"
  
         l=ax0.scatter(entry['y_pred'], entry['y_true'], alpha=0.8, label=label,color=color_list[i%10], marker=m)
         #plot_regression(entry['y_pred'], entry['y_true'], ax0, c=color_list[i%10])
