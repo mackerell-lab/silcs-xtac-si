@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy
 from scipy.special import logsumexp
-from scipy.stats import zscore
+from scipy.stats import zscore, BootstrapMethod
 import numpy as np
 import argparse
 import os,csv,ast
@@ -155,9 +155,18 @@ def get_pearson_spearman_nan(x, y):
   x = np.array(x)
   y = np.array(y)
   nan = np.logical_or(np.isnan(x), np.isnan(y))
+  #pearson_ci = scipy.stats.pearsonr(x[~nan], y[~nan]).confidence_interval(0.95, method=bootstrap('BCa',np.random.default_rng())) # default method: Fischer z score method
+  rng = np.random.default_rng()
+  pearson_results = scipy.stats.pearsonr(x[~nan], y[~nan])
+  method = BootstrapMethod(method='basic',n_resamples=10)#, rng=rng)
+  pearson_ci = pearson_results.confidence_interval(
+    confidence_level=0.95,
+    method=method)
+
   pearsonr, pr = scipy.stats.pearsonr(x[~nan], y[~nan])
   spearmanr, ps = scipy.stats.spearmanr(x, y, nan_policy='omit')
-  return pearsonr, pr, spearmanr, ps
+  if np.isnan(pearson_ci[0]): pearson_ci = [-1,1]
+  return pearsonr, pr, spearmanr, ps, pearson_ci
 
 def percent_correct(y_true, y_pred):
   y_true = np.array(y_true)
@@ -302,7 +311,7 @@ def run_loocv(data, X_labels, y_label, alpha=1.0):
     weights.append(model.coef_)
 
   # Metrics
-  r, p_r, s, p_s = get_pearson_spearman_nan(trues, preds)
+  r, p_r, s, p_s, p_ci = get_pearson_spearman_nan(trues, preds)
   rmse = rmse_nan(trues, preds)
   PC = percent_correct(trues, preds)
 
@@ -310,7 +319,7 @@ def run_loocv(data, X_labels, y_label, alpha=1.0):
   mean_weights = np.mean(weights, axis=0)
   stderr_weights = np.std(weights, axis=0, ddof=1) / np.sqrt(len(weights))
 
-  return {'r':r,'s':s,'PC':PC,'y_pred':preds,'y_true':trues,'n':len(trues),'rmse':rmse, 'mean_weights':mean_weights,'stderr_weights':stderr_weights}
+  return {'r':r,'ci':p_ci,'s':s,'PC':PC,'y_pred':preds,'y_true':trues,'n':len(trues),'rmse':rmse, 'mean_weights':mean_weights,'stderr_weights':stderr_weights}
 
 # looks at all loo-cv results across data sets
 # also computes general model derived by weighted-average of weights 
@@ -362,16 +371,17 @@ def analyze_loocv_results(results, X_labels, data):
 
         # general model:
         y_pred = X @ weights + shift
-        r, p_r, s, p_s = get_pearson_spearman_nan(y,y_pred)
+        r, p_r, s, p_s, p_ci = get_pearson_spearman_nan(y,y_pred)
         # x= pred, y= true
         m = 'o' if sys_index < 10 else '^'
-        r_stderr = np.sqrt((1-r)/(len(y)-2))
-        label = sys_dict[f'{ligase}-{target}']+ f' (r = {r:.2f} ± {r_stderr:.2f})'
+        #r_err = np.sqrt((1-r)/(len(y)-2))
+        r_err = np.abs(p_ci[1]-p_ci[0])/2
+        label = sys_dict[f'{ligase}-{target}']+ f' (r = {r:.2f} ± {r_err:.2f})'
         # for only fak1 there are multiples
         if y_label == 'DC50 (nM, Degradation of FAK in PC3 cells after 24 h treatment)':
-          label = sys_dict[f'{ligase}-{target}']+r'$^{(a)}$' +f' (r = {r:.2f} ± {r_stderr:.2f})'
+          label = sys_dict[f'{ligase}-{target}']+r'$^{(a)}$' +f' (r = {r:.2f} ± {r_err:.2f})'
         if y_label == 'DC50 (nM, Degradation of FAK in A549 cells after 24 h treatment)':
-          label = sys_dict[f'{ligase}-{target}']+r'$^{(b)}$' +f' (r = {r:.2f} ± {r_stderr:.2f})'
+          label = sys_dict[f'{ligase}-{target}']+r'$^{(b)}$' +f' (r = {r:.2f} ± {r_err:.2f})'
         
         axp.scatter(y_pred, y, c=color_list[sys_index%10],label=label, marker=m)
         #plot_regression(y_pred, y, axp, c=color_list[sys_index%10])
@@ -510,7 +520,7 @@ def rfe_loocv(data, X_labels, y_label, alpha=1.0, verbose=True):
       trues.append(y_test[0])
       weights.append(model.coef_)
 
-    r, _, s, _ = get_pearson_spearman_nan(trues, preds)
+    r, _, s, _, p_ci = get_pearson_spearman_nan(trues, preds)
     PC = percent_correct(trues, preds)
     weights = np.vstack(weights)
     mean_abs_weights = np.mean(np.abs(weights), axis=0)
@@ -831,13 +841,14 @@ if __name__ == "__main__":
       for i,entry in enumerate(all_loocv_preds):
         m = 'o' if i < 10 else '^'
 
-        r_stderr=np.sqrt((1-entry['r'])/(entry['n']-2))
-        label = f"{sys_dict[entry['pair']]} (r = {entry['r']:.2f} ± {r_stderr:.2f})"
+        #r_err=np.sqrt((1-entry['r'])/(entry['n']-2))
+        r_err=np.abs(entry['ci'][1]-entry['ci'][0])/2
+        label = f"{sys_dict[entry['pair']]} (r = {entry['r']:.2f} ± {r_err:.2f})"
         # for only fak1 there are multiples
         if entry['y_label'] == 'DC50 (nM, Degradation of FAK in PC3 cells after 24 h treatment)':
-          label = sys_dict[entry['pair']] + r'$^{(a)}$' + f"(r = {entry['r']:.2f} ± {r_stderr:.2f})"
+          label = sys_dict[entry['pair']] + r'$^{(a)}$' + f"(r = {entry['r']:.2f} ± {r_err:.2f})"
         if entry['y_label'] == 'DC50 (nM, Degradation of FAK in A549 cells after 24 h treatment)':
-          label = sys_dict[entry['pair']] + r'$^{(b)}$' + f"(r = {entry['r']:.2f} ± {r_stderr:.2f})"
+          label = sys_dict[entry['pair']] + r'$^{(b)}$' + f"(r = {entry['r']:.2f} ± {r_err:.2f})"
  
         l=ax0.scatter(entry['y_pred'], entry['y_true'], alpha=0.8, label=label,color=color_list[i%10], marker=m)
         #plot_regression(entry['y_pred'], entry['y_true'], ax0, c=color_list[i%10])
@@ -850,7 +861,7 @@ if __name__ == "__main__":
         n_sum += entry['n']
       r_weighted /= n_sum
       rmse_weighted /= n_sum
-      pool_r,_,pool_s,_=get_pearson_spearman_nan(pool_true,pool_pred)
+      pool_r,_,pool_s,_,p_ci=get_pearson_spearman_nan(pool_true,pool_pred)
       pool_rmse = rmse_nan(pool_true, pool_pred)
       print(f'N_feat: {len(c_feat)}: {c_feat}')
       print(f'r_weight = {r_weighted:.2f} RMSE = {rmse_weighted:.2f}')
