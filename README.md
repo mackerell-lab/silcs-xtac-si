@@ -18,4 +18,5 @@ Supporting Information for SILCS-XTAC method paper, Nordquist et al.
   * draw_grid.py: helper script to assemble svg images into a grid
   * create_sdf_smiles_csv.py: helper script to make smiles.csv
   * Each system directory contains the sdf format files and a grid-style svg image of the protacs with warheads highlighted
+* md_parameters: GROMACS MD parameter files for minimization, equilibration, and NPT production simulations
 

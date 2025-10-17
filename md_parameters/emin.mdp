@@ -1,0 +1,49 @@
+; ------emin.mdp------
+
+;define = -DPOSRES
+
+gen_vel             = no 
+
+integrator          = steep
+nsteps              = 5000
+
+;       minimization params
+
+emtol               =  10          ; force tol
+emstep              =  0.01        ; max step size in nm
+
+;------nonbond------
+nstlist              =  1         ; freq for updating verlet list ; another option is -1 for heuristic, but must have buffer zone
+rlist                =  1.0       ; cutoff for short range neighbor list
+ns_type              =  grid      ; check atoms in neighboring grid cells only for making vlist
+
+cutoff-scheme           = Verlet
+vdwtype              = cut-off     ;
+vdw-modifier            = force-switch
+rvdw_switch          = 0.5        ; vdw switched between this and rvdw to 0
+rvdw                 = 0.8        ; vdw cutoff at 8 A
+DispCorr             = EnerPres   ; long range dispersion corrections for Energy and Pressure
+
+coulombtype          =  pme       ; Fast Particle-Mesh Ewald electrostatics
+rcoulomb             =  0.8       ; distance for coulomb cut-off
+fourierspacing       =  0.12      ; maximum grid spacing (nm) for the FFT grid
+pme_order            =  4         ; cubic interpolation for PME
+ewald_rtol           = 1e-5       ; 
+
+;------pbc------
+pbc                  = xyz        ; use pbc in all directions
+
+tcoupl               = no
+pcoupl               = no
+
+
+;      constraints
+constraints          =  h-bonds
+constraint-algorithm = lincs
+continuation         = no         ; do not constrain the starting configuration
+
+nstcomm             =  1         ; freq for CoM removal
+
+
+;      output
+nstenergy           = 10          ; freq for storing energy and data
